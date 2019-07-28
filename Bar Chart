@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Document</title>
+    <link
+      href="https://fonts.googleapis.com/css?family=Lato|Montserrat|Open+Sans|PT+Sans|Roboto|Roboto+Condensed|Sarabun|Source+Sans+Pro"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.7.0/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.2.2/d3.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: "Open Sans", sans-serif;
+      }
+
+      .container {
+        margin-top: 2.5em;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+      }
+
+      #title {
+        font-weight: normal;
+        text-align: center;
+      }
+
+      .svgClass {
+        box-shadow: 0 10px 10px 5px lightgrey;
+        border-radius: 4px;
+      }
+
+      .bar {
+        fill: blue;
+      }
+
+      .bar:hover {
+        fill: green;
+      }
+
+      .tooltip {
+        position: absolute;
+        display: grid;
+        height: auto;
+        width: auto;
+        background: lightgrey;
+        font-family: Arial;
+        align-items: center;
+        text-align: center;
+        padding: 8px;
+        border-radius: 4px;
+      }
+
+      #graph {
+        position: absolute;
+      }
+    </style>
+  </head>
+
+  <body>
+    <script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
+    <div class="container">
+      <h1 id="title">United States GDP</h1>
+      <div id="graph"></div>
+    </div>
+
+    <script>
+      //---- svg settings
+      const h = 500;
+      const w = 900;
+      const padding = 60;
+
+      //---- setting the tooltips
+      const tooltip = d3
+        .select("#graph")
+        .append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0)
+        .attr("id", "tooltip");
+
+      //---- svg selection
+      const selection = d3
+        .select("#graph")
+        .append("svg")
+        .style("height", h)
+        .style("width", w)
+        .attr("class", "svgClass");
+
+      //---- getting the data
+      d3.json(
+        "https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/GDP-data.json",
+        data => {
+          const dataset = data.data;
+          const barWidth = (w - padding * 2) / dataset.length;
+
+          const yScale = d3
+            .scaleLinear()
+            .domain([0, d3.max(dataset, d => d[1])])
+            .range([0, h - padding * 2]);
+
+          //---- setting the x-axis with time scale
+          const years = dataset.map(data => new Date(data[0]));
+
+          const yearsMax = new Date(d3.max(years));
+
+          const xScale = d3
+            .scaleTime()
+            .domain([d3.min(years), yearsMax])
+            .range([0, w - padding * 2]);
+
+          const xAxis = d3.axisBottom(xScale);
+          console.log(xAxis);
+          const xAxisGroup = selection
+            .append("g")
+            .call(xAxis)
+            .attr("transform", `translate(${padding}, ${h + 10 - padding})`)
+            .attr("id", "x-axis");
+
+          //---- setting the y-axis
+          const yAxis = d3.axisLeft(
+            d3
+              .scaleLinear()
+              .domain([0, d3.max(dataset, d => d[1])])
+              .range([h - padding * 2, 0])
+          );
+          const yAxisGroup = selection
+            .append("g")
+            .call(yAxis)
+            .attr("transform", `translate(${padding - 10}, ${padding})`)
+            .attr("id", "y-axis");
+
+          //---- setting the rects
+          selection
+            .selectAll("rect")
+            .data(dataset)
+            .enter()
+            .append("rect")
+            .style("height", d => yScale(d[1]))
+            .style("width", d => barWidth)
+            .attr("class", "bar")
+            .attr("data-date", (d, i) => dataset[i][0])
+            .attr("data-gdp", (d, i) => dataset[i][1])
+            .attr("x", (d, i) => padding + xScale(years[i]))
+            .attr("y", d => h - padding - yScale(d[1]))
+
+            //---- setting the tooltips
+            .on("mouseover", (d, i) => {
+              tooltip
+                .transition()
+                .duration("80")
+                .style("opacity", 0.9);
+              tooltip
+                .html(`${d[0]}: \$${d[1]}`)
+                .style("left", `${i * barWidth + barWidth / 2}px`)
+                .style("bottom", `${250}px`)
+                .attr("data-date", d[0]);
+            })
+            .on("mouseout", () => {
+              tooltip.transition().style("opacity", 0);
+            });
+
+          //---- setting axis' comments
+          const yTitle = selection
+            .append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("x", -100)
+            .attr("y", 80)
+            .text("GDP");
+        }
+      );
+    </script>
+  </body>
+</html>
