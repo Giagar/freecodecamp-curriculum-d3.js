@@ -9,10 +9,15 @@
       href="https://fonts.googleapis.com/css?family=Lato|Montserrat|Open+Sans|PT+Sans|Roboto|Roboto+Condensed|Sarabun|Source+Sans+Pro"
       rel="stylesheet"
     />
+    <script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
+    <script src="https://d3js.org/d3-time.v1.min.js"></script>
+    <script src="https://d3js.org/d3-time-format.v2.min.js"></script>
+    <script src="https://d3js.org/d3-scale.v1.min.js"></script>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.7.0/d3.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.2.2/d3.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-tip/0.6.7/d3-tip.min.js"></script>
-    
+
     <style>
       * {
         margin: 0;
@@ -53,7 +58,7 @@
 
       #legend {
         position: absolute;
-        width: auto;
+        widht: auto;
         height: auto;
         border: 1px solid grey;
         top: 60px;
@@ -84,14 +89,8 @@
       }
     </style>
   </head>
-  
-  <body>
-    <script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
-    <script src="https://d3js.org/d3-time.v1.min.js"></script>
-    <script src="https://d3js.org/d3-time-format.v2.min.js"></script>
-    <script src="https://d3js.org/d3-scale.v1.min.js"></script>
-    <script src="https://d3js.org/d3.v5.min.js"></script>
 
+  <body>
     <div class="container">
       <div id="wrapper">
         <div id="titleContainer">
@@ -114,7 +113,7 @@
         </div>
       </div>
     </div>
-    
+
     <script>
       const h = 600;
       const w = 600;
