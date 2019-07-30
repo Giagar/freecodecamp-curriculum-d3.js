@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Heat Map</title>
+    <link
+      href="https://fonts.googleapis.com/css?family=Lato|Montserrat|Open+Sans|PT+Sans|Roboto|Roboto+Condensed|Sarabun|Source+Sans+Pro"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
+    <script src="https://d3js.org/d3-time.v1.min.js"></script>
+    <script src="https://d3js.org/d3-time-format.v2.min.js"></script>
+    <script src="https://d3js.org/d3-scale.v1.min.js"></script>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.7.0/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.2.2/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-tip/0.6.7/d3-tip.min.js"></script>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: Arial;
+      }
+
+      #title-container {
+        text-align: center;
+        margin: 0 auto;
+        margin-top: 40px;
+      }
+
+      h1 {
+        font-weight: 500;
+        padding: 0.6em;
+      }
+
+      h2 {
+        font-weight: 400;
+        color: rbg(40, 40, 40);
+      }
+
+      #chart-container {
+        margin-top: 40px;
+        margin-left: 15px;
+        position: absolute;
+      }
+
+      .xLabel,
+      .yLabel {
+        text-anchor: middle;
+        text-transform: uppercase;
+        font-size: 0.8em;
+      }
+
+      /*tooltips */
+      .tooltip {
+        display: grid;
+        height: auto;
+        width: auto;
+        padding: 16px;
+        position: absolute;
+        background: lightgrey;
+        align-items: center;
+        justify-items: center;
+        border-radius: 4px;
+        font-family: Arial;
+      }
+
+      /*tooltips: to reduce the space between the spans*/
+      span {
+        margin: -8px;
+      }
+
+      /*border around each rects when hovered on it*/
+      rect:hover {
+        stroke: rgb(240, 240, 240);
+        stroke-width: 2.5;
+      }
+    </style>
+  </head>
+  
+  <body>
+    <div id="title-container">
+      <h1 id="title">Monthly Global Land-Surface Temperature</h1>
+      <h2 id="description">1753 - 2015: base temperature 8.66°C</h2>
+    </div>
+    <div id="chart-container"></div>
+    <div id="legend"></div>
+
+    <script>
+      const height = 400;
+      const width = 1600;
+      const margin = {
+        top: 25,
+        right: 25,
+        bottom: 45,
+        left: 65
+      };
+
+      const hGraph = height - margin.top - margin.bottom;
+      const wGraph = width - margin.left - margin.right;
+
+      const months = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December"
+      ];
+
+      //canvas
+      const selection = d3
+        .select("#chart-container")
+        .append("svg")
+        .attr("height", height)
+        .attr("width", width);
+
+      //Labels
+      const xLabel = selection
+        .append("text")
+        .attr("class", "xLabel")
+        .text("years")
+        .attr("transform", `translate(${width / 2}, ${height - 8})`);
+
+      const yLabel = selection
+        .append("text")
+        .attr("class", "yLabel")
+        .text("months")
+        .attr("transform", `rotate(-90)`)
+        .attr("x", -height / 2)
+        .attr("y", 15);
+
+      //Graph
+      const graph = selection
+        .append("g")
+        .attr("height", hGraph)
+        .attr("width", wGraph)
+        .attr("x", margin.left)
+        .attr("y", margin.top);
+
+      //Tooltips
+      let div = d3
+        .select("#chart-container")
+        .append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+
+      //data
+      d3.json(
+        "https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/global-temperature.json",
+        data => {
+          const dataset = data.monthlyVariance;
+
+          const temperature = dataset.map(
+            d => Math.round((data.baseTemperature + d.variance) * 100) / 100
+          );
+
+          //scales
+          const xScale = d3
+            .scaleBand()
+            .domain(dataset.map(d => d.year))
+            .range([0, wGraph]);
+
+          const yScale = d3
+            .scaleBand()
+            .domain([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+            .range([hGraph, 0]);
+
+          //axis
+          const xAxis = d3
+            .axisBottom(xScale)
+            .tickValues(xScale.domain().filter(y => y % 5 === 0)) //to filter the xScale domain and get an array of fewer values
+            .tickSizeOuter(0);
+
+          graph
+            .append("g")
+            .attr("id", "x-axis")
+            .attr("class", "xAxis")
+            .attr("transform", `translate(${margin.left}, ${hGraph})`)
+            .call(xAxis)
+            .selectAll("text")
+            .attr("transform", "rotate(70)")
+            .attr("text-anchor", "start")
+            .attr("x", 5)
+            .attr("y", 4);
+
+          const yAxis = d3
+            .axisLeft(yScale)
+            .tickFormat(d => months[d])
+            .tickSizeOuter(0);
+
+          graph
+            .append("g")
+            .attr("id", "y-axis")
+            .attr("class", "yAxis")
+            .attr("transform", `translate(${margin.left}, 0)`)
+            .call(yAxis);
+
+          //rects
+          const colourScale = d3
+            .scaleLinear()
+            .domain([d3.min(temperature, d => d), d3.max(temperature, d => d)])
+            .range(["#007AFF", "#FFA500"]);
+
+          graph
+            .selectAll("rect")
+            .data(dataset)
+            .enter()
+            .append("rect")
+            .attr("class", "cell")
+            .attr("data-month", d => d.month - 1) //-1 to accomplished a test request: the value of data-month should be at most 11
+            .attr("data-year", d => d.year)
+            .attr("data-temp", d => data.baseTemperature + d.variance)
+            .attr("x", (d, i) => margin.left + xScale(d.year))
+            .attr("y", (d, i) => margin.top + 2.5 + yScale(d.month))
+            .attr("width", d => xScale.bandwidth(d.year))
+            .attr("height", d => yScale.bandwidth(d.month))
+            .style("fill", d =>
+              colourScale(
+                Math.round((data.baseTemperature + d.variance) * 100) / 100
+              )
+            )
+            .on("mouseover", (d, i) => {
+              div
+                .transition()
+                .duration(200)
+                .style("opacity", 0.9);
+              //content:
+              let date = new Date(d.year, d.month);
+              div
+                .html(
+                  `<span class="date">${d3.timeFormat("%Y - %B")(
+                    date
+                  )}</span> <br/> <span class='temperature'>${d3.format(".1f")(
+                    data.baseTemperature + d.variance
+                  )}°C</span> <br/> <span class="variance">${d3.format("+.1f")(
+                    d.variance
+                  )}°C</span>`
+                )
+                .style("left", d3.event.pageX - 50 + "px")
+                .style("top", d3.event.pageY - 285 + "px")
+                .attr("data-year", d.year)
+                .attr("id", "tooltip");
+            })
+            .on("mouseout", () => {
+              div
+                .transition()
+                .duration(250)
+                .style("opacity", 0);
+            });
+
+          //legend
+          const wLegend = 400;
+          const hLegend = 70;
+          const legendColors = [1, 2, 3, 4, 5, 6, 7, 8];
+
+          const legMargin = {
+            top: 0,
+            right: 0,
+            bottom: 50,
+            left: 0
+          };
+
+          const legend = d3
+            .select("#legend")
+            .append("svg")
+            .attr("height", hLegend)
+            .attr("width", wLegend)
+            .attr(
+              "transform",
+              `translate(${margin.left + 15}, ${height + margin.bottom} )`
+            )
+            .style("margin-bottom", "40px");
+
+          const legGraph = legend
+            .append("g")
+            .attr("height", `${hLegend - legMargin.top - legMargin.bottom}`)
+            .attr("width", `${wLegend - legMargin.left - legMargin.right}`);
+
+          const legXScale = d3
+            .scaleLinear()
+            .domain([d3.min(temperature, d => d), d3.max(temperature, d => d)])
+            .range([0, wLegend]);
+
+          const legXAxis = d3
+            .axisBottom(legXScale)
+            .ticks(22)
+            .tickSizeOuter(0);
+          legend
+            .append("g")
+            .attr("transform", `translate(0, ${hLegend - legMargin.bottom})`)
+            .call(legXAxis)
+            .selectAll("text")
+            .attr("transform", "rotate(70)")
+            .attr("text-anchor", "start")
+            .attr("x", 5)
+            .attr("y", 4);
+
+          let legTemperature = temperature.sort((a, b) => a - b);
+
+          for (let i = 0; i < legTemperature.length; i++) {
+            if (legTemperature[i] === legTemperature[i + 1]) {
+              delete legTemperature[i];
+            }
+          }
+
+          legTemperature = legTemperature.filter(Boolean);
+
+          legGraph
+            .selectAll("rect")
+            .data(legTemperature)
+            .enter()
+            .append("rect")
+            .attr("width", wLegend / legTemperature.length)
+            .attr("height", hLegend - legMargin.bottom)
+            .attr("x", (d, i) => (i * wLegend) / legTemperature.length)
+            .style("fill", d => colourScale(d));
+        }
+      );
+    </script>
+  </body>
+</html>
