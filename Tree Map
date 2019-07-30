@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Tree Map</title>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
+
+    <style>
+      @import url("https://fonts.googleapis.com/css?family=Raleway|Roboto&display=swap");
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        text-align: center;
+        font-family: Roboto, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .titleContainer {
+        padding-top: 1em;
+      }
+
+      h1,
+      h2 {
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+
+      #title {
+        font-size: 45px;
+        margin-bottom: 10px;
+      }
+
+      #description {
+        padding-bottom: 1.5rem;
+        text-transform: uppercase;
+        font-size: 1.15rem;
+      }
+
+      .canvas {
+        margin: 3.2em 0;
+      }
+
+      .canvas svg {
+        background: hsl(0, 0%, 14%);
+        border: 2px solid hsl(0, 0%, 14%);
+      }
+
+      .tile-text {
+        font-size: 0.6rem;
+      }
+
+      .tooltip {
+        position: absolute;
+        padding: 4px;
+        background: hsla(0, 0%, 15%, 0.9);
+        border: 1.15px solid hsla(0, 0%, 5%, 1);
+        color: white;
+        border-radius: 4.4px;
+      }
+
+      #legend svg {
+        background: white;
+        margin-bottom: 4em;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="titleContainer">
+      <h1 id="title">Video Game Sales</h1>
+      <div id="description">
+        Top 100 Most Sold Video Games Grouped by Platform
+      </div>
+    </div>
+
+    <div class="canvas"></div>
+
+    <div id="legend">
+      <h2 class="legend__title">Legend</h2>
+      <div class="legend__content"></div>
+    </div>
+
+    <script>
+      //data source
+      const URL =
+        "https://cdn.rawgit.com/freeCodeCamp/testable-projects-fcc/a80ce8f9/src/data/tree_map/video-game-sales-data.json";
+
+      //treemap container size
+      const W = 1000;
+      const H = 600;
+
+      //setting the canvas for the treemap
+      const svg = d3
+        .select(".canvas")
+        .append("svg")
+        .attr("height", H)
+        .attr("width", W);
+
+      //scales
+      const fader = color => d3.interpolateRgb(color, "#fff")(0.2);
+      const color = d3.scaleOrdinal(d3.schemeCategory20.map(fader));
+      const format = d3.format(",d");
+
+      //tooltips part 1: the container
+      const tooltip = d3
+        .select("body")
+        .append("div")
+        .attr("id", "tooltip")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+
+      //treemap structure
+      const treemap = d3
+        .treemap()
+        .size([W, H])
+        .paddingInner(1.9);
+
+      //legend container
+      const legend = d3
+        .select(".legend__content")
+        .append("svg")
+        .attr("width", 804)
+        .attr("height", 44);
+
+      //fetching data and elaborating them
+      d3.json(URL, (error, data) => {
+        if (error) throw error;
+
+        //giving a hierarchical structure to the data
+        const root = d3
+          .hierarchy(data)
+          .eachBefore(function(d) {
+            d.data.id = (d.parent ? d.parent.data.id + "." : "") + d.data.name;
+          }) //necessary for id tooltip and d.data.id
+          .sum(d => d.value)
+          .sort(function(a, b) {
+            return b.height - a.height || b.value - a.value;
+          }); //it sorts the tile's disposition
+
+        //building the treemap with the data hierarchically set
+        treemap(root);
+
+        const cell = svg
+          .selectAll("g")
+          .data(root.leaves())
+          .enter()
+          .append("g")
+          .attr("class", "group") //da provare
+          .attr("transform", d => `translate(${d.x0}, ${d.y0})`);
+
+        cell
+          .append("rect")
+          .attr("id", function(d) {
+            return d.data.id;
+          })
+          //.attr("id", d => console.log("prova", d.data.id)) //undefined!!!!
+          .attr("class", "tile")
+          .attr("data-name", d => d.data.name)
+          .attr("data-category", d => d.data.category)
+          .attr("data-value", d => d.data.value)
+          .attr("width", d => d.x1 - d.x0)
+          .attr("height", d => d.y1 - d.y0)
+          .attr("fill", d => color(d.data.category))
+
+          //tooltips part 2: the content and the activation
+          .on("mousemove", d => {
+            //mousemove: with spread areas, mouseover would leave the tooltip at the border of the tile, while mousemove follows the tile
+            tooltip.style("opacity", 1);
+            tooltip
+              .html(
+                () =>
+                  `Name: ${d.data.name} <br/> Category: ${
+                    d.data.category
+                  } <br/> Value: ${format(d.value)}`
+              )
+              .style("left", d3.event.pageX + 10 + "px")
+              .style("top", d3.event.pageY - 28 + "px")
+              .attr("data-value", d.data.value);
+          })
+          .on("mouseout", () => tooltip.style("opacity", 0));
+
+        cell
+          .append("text")
+          .attr("class", "tile-text")
+          .selectAll("tspan")
+          .data(d => d.data.name.split(/(?=[A-Z][^A-Z])/g))
+          .enter()
+          .append("tspan")
+          .attr("x", 4)
+          .attr("y", (d, i) => 10 + i * 10)
+          .text(d => d);
+
+        // ---- legend
+        //creatind a new array with only the categories' values
+        let categories = root.leaves().map(obj => obj.data.category);
+
+        //deleting all the doubles from the array
+        for (let i = 0; i < categories.length; i++) {
+          for (let l = i + 1; l < categories.length; l++) {
+            if (categories[i] === categories[l]) {
+              delete categories[l];
+            }
+          }
+          categories = categories.filter(Boolean);
+        }
+
+        //building the colored rects of the legend
+        const legTiles = legend
+          .append("g") //using groups because we have two elements: the rect and the text
+          .selectAll("g")
+          .data(categories)
+          .enter()
+          .append("g")
+          .attr("transform", (d, i) => `translate(${4 + 45 * i}, 4)`);
+
+        legTiles
+          .append("rect")
+          .attr("class", "legend-item")
+          .attr("width", 15)
+          .attr("height", 15)
+          .attr("fill", d => color(d));
+
+        //adding the text of the legend
+        legTiles
+          .append("text")
+          .style("text-anchor", "middle")
+          .attr("x", 10)
+          .attr("y", 35)
+          .text(d => d);
+      });
+    </script>
+  </body>
+</html>
